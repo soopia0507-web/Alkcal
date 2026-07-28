@@ -3,656 +3,1072 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 급식 & 음식 칼로리 도우미</title>
+    <title>반짝 - 학급 수행평가 & 결석자 케어 캘린더</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        sky: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            800: '#0c4a6e',
+                            900: '#0f172a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-            background-color: #f8fafc;
-        }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-        }
-        .pulse-slow {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: .5; }
-        }
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.3); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.6); }
     </style>
 </head>
-<body class="text-slate-800 min-h-screen flex flex-col justify-between">
+<body class="bg-slate-50 dark:bg-black text-slate-800 dark:text-zinc-100 min-h-screen transition-colors duration-300">
 
-    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200">
-        <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-md shadow-emerald-200">
-                    <i data-lucide="utensils" class="w-5 h-5"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-lg leading-tight text-slate-900">AI 칼로리 도우미</h1>
-                    <p class="text-xs text-slate-500">급식 & 음식 영양 분석기</p>
-                </div>
-            </div>
-            <button id="historyToggleBtn" class="p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition flex items-center gap-1.5 text-sm font-medium">
-                <i data-lucide="history" class="w-4 h-4"></i>
-                <span class="hidden sm:inline">기록</span>
-            </button>
-        </div>
-    </header>
-
-    <main class="max-w-3xl mx-auto px-4 py-6 w-full flex-grow space-y-6">
+    <!-- App Container -->
+    <div id="app" class="flex flex-col min-h-screen">
         
-        <!-- Welcome Banner -->
-        <div class="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-            <div class="relative z-10">
-                <h2 class="text-xl sm:text-2xl font-bold mb-1">오늘 무엇을 드셨나요? 🍱</h2>
-                <p class="text-emerald-100 text-sm sm:text-base">식판이나 음식 사진을 찍어 올리면 AI가 칼로리와 영양소를 즉시 분석해 드립니다.</p>
+        <!-- D-1 Alert Top Banner (Hidden by default) -->
+        <div id="d1Banner" class="hidden bg-gradient-to-r from-sky-500 via-sky-600 to-indigo-600 text-white px-4 py-3 shadow-lg relative transition-all duration-300 z-50">
+            <div class="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center gap-3">
+                    <span class="bg-white/20 p-2 rounded-xl animate-pulse">
+                        <i class="fa-solid fa-bell text-yellow-300 text-lg"></i>
+                    </span>
+                    <div>
+                        <span class="font-bold bg-red-500 text-xs px-2 py-0.5 rounded-full uppercase tracking-wider">D-1 내일 수행평가</span>
+                        <p id="d1BannerText" class="text-sm font-semibold mt-0.5">내일 진행되는 수행평가가 있습니다! 꼼꼼히 준비하세요.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="requestNotificationPermission()" class="text-xs bg-white text-sky-700 font-bold px-3 py-1.5 rounded-lg hover:bg-sky-50 transition shadow-sm">
+                        <i class="fa-regular fa-bell mr-1"></i> 푸시 알림 켜기
+                    </button>
+                    <button onclick="closeD1Banner()" class="text-white/80 hover:text-white p-1">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
             </div>
-            <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
         </div>
 
-        <!-- Upload & Camera Section -->
-        <div class="glass-card rounded-2xl p-5 shadow-sm space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 class="font-semibold text-slate-800 flex items-center gap-2">
-                    <i data-lucide="camera" class="w-5 h-5 text-emerald-600"></i>
-                    사진 등록하기
-                </h3>
-                <span class="text-xs text-slate-400">JPG, PNG 지원</span>
-            </div>
-
-            <!-- Image Selection Area -->
-            <div id="dropZone" class="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-xl p-6 text-center cursor-pointer transition bg-slate-50/50 hover:bg-emerald-50/30 flex flex-col items-center justify-center min-h-[200px] relative overflow-hidden">
-                <input type="file" id="fileInput" accept="image/*" class="hidden">
-                
-                <!-- Default State -->
-                <div id="uploadPrompt" class="space-y-3">
-                    <div class="w-14 h-14 mx-auto rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                        <i data-lucide="image-plus" class="w-7 h-7"></i>
+        <!-- Header -->
+        <header class="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-sky-100 dark:border-zinc-800 transition-colors">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <!-- Logo & Class Info -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-sky-500 flex items-center justify-center text-white shadow-md shadow-sky-500/30">
+                        <i class="fa-solid fa-calendar-check text-xl"></i>
                     </div>
                     <div>
-                        <p class="font-medium text-slate-700">여기를 클릭하여 음식 사진 선택</p>
-                        <p class="text-xs text-slate-400 mt-1">또는 이미지 파일을 드래그하여 놓으세요</p>
+                        <div class="flex items-center gap-2">
+                            <h1 class="font-extrabold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-sky-600 to-sky-400 bg-clip-text text-transparent">반짝 Calendar</h1>
+                            <span id="headerRoleBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                                -
+                            </span>
+                        </div>
+                        <p id="headerClassTitle" class="text-xs text-slate-500 dark:text-zinc-400 font-medium">학급을 선택하거나 생성해 주세요</p>
                     </div>
-                    <div class="flex items-center justify-center gap-2 pt-2">
-                        <button type="button" id="cameraBtn" class="px-3.5 py-1.5 bg-slate-800 text-white text-xs font-medium rounded-lg hover:bg-slate-700 transition flex items-center gap-1.5">
-                            <i data-lucide="aperture" class="w-3.5 h-3.5"></i>
-                            카메라 촬영
+                </div>
+
+                <!-- Right Actions -->
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <!-- Notification Bell with Badge -->
+                    <button id="notifBellBtn" onclick="toggleMakeupModal(true)" class="relative p-2.5 rounded-xl text-slate-600 dark:text-zinc-300 hover:bg-sky-50 dark:hover:bg-zinc-800 transition">
+                        <i class="fa-solid fa-paper-plane text-lg"></i>
+                        <span id="makeupNotifBadge" class="hidden absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white dark:ring-zinc-900 animate-ping"></span>
+                        <span id="makeupNotifDot" class="hidden absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white dark:ring-zinc-900"></span>
+                    </button>
+
+                    <!-- Theme Toggle -->
+                    <button id="themeToggleBtn" onclick="toggleDarkMode()" class="p-2.5 rounded-xl text-slate-600 dark:text-zinc-300 hover:bg-sky-50 dark:hover:bg-zinc-800 transition">
+                        <i id="themeIcon" class="fa-solid fa-moon text-lg"></i>
+                    </button>
+
+                    <!-- User Profile & Switch Class Button -->
+                    <div id="userProfileArea" class="hidden flex items-center gap-2 border-l border-slate-200 dark:border-zinc-800 pl-3">
+                        <div class="text-right hidden sm:block">
+                            <div id="userNameDisplay" class="text-xs font-bold text-slate-800 dark:text-zinc-100">홍길동</div>
+                            <div id="userNumDisplay" class="text-[10px] text-slate-500 dark:text-zinc-400">1반 15번</div>
+                        </div>
+                        <button onclick="leaveClassRoom()" title="학급 변경/나가기" class="p-2 text-xs font-semibold text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition">
+                            <i class="fa-solid fa-arrow-right-from-bracket"></i>
                         </button>
                     </div>
                 </div>
+            </div>
+        </header>
 
-                <!-- Preview State -->
-                <div id="previewContainer" class="hidden w-full h-full flex flex-col items-center">
-                    <img id="imagePreview" src="" alt="음식 사진 미리보기" class="max-h-64 object-contain rounded-lg shadow-sm border border-slate-200">
-                    <p id="fileName" class="text-xs text-slate-500 mt-2 font-mono truncate max-w-xs"></p>
+        <!-- Modal 1: Login / Join Class Gateway (Overlay) -->
+        <div id="gatewayModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md">
+            <div class="bg-white dark:bg-zinc-900 border border-sky-100 dark:border-zinc-800 rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6 relative overflow-hidden">
+                <!-- Sky Accent Background Orb -->
+                <div class="absolute -top-12 -right-12 w-32 h-32 bg-sky-400/20 rounded-full blur-2xl pointer-events-none"></div>
+
+                <div class="text-center space-y-2">
+                    <div class="inline-flex p-3 rounded-2xl bg-sky-50 dark:bg-sky-950/50 text-sky-500 mb-1">
+                        <i class="fa-solid fa-users-rectangle text-3xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-black text-slate-900 dark:text-white">우리 반 수행평가 시작하기</h2>
+                    <p class="text-xs text-slate-500 dark:text-zinc-400">학급을 만들거나 공유받은 코드/비밀번호로 입장하세요.</p>
                 </div>
-            </div>
 
-            <!-- Action Buttons -->
-            <div class="flex gap-2 pt-1">
-                <button id="resetBtn" class="hidden px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium rounded-xl text-sm transition">
-                    다시 선택
-                </button>
-                <button id="analyzeBtn" disabled class="flex-1 py-3 bg-slate-300 text-slate-500 cursor-not-allowed font-semibold rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-2">
-                    <i data-lucide="sparkles" class="w-4 h-4"></i>
-                    AI 영양소 분석 시작
-                </button>
-            </div>
-        </div>
+                <form id="gatewayForm" onsubmit="handleGatewaySubmit(event)" class="space-y-4">
+                    <!-- Class Code / Name -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">학급 이름 / 코드 <span class="text-sky-500">*</span></label>
+                        <input type="text" id="inputClassCode" required placeholder="예: 3학년2반 또는 302" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm font-medium transition">
+                    </div>
 
-        <!-- CAMERA MODAL -->
-        <div id="cameraModal" class="fixed inset-0 bg-black/80 z-50 hidden flex flex-col items-center justify-center p-4">
-            <div class="bg-slate-900 rounded-2xl overflow-hidden max-w-md w-full relative">
-                <video id="webcam" autoplay playsinline class="w-full h-72 object-cover bg-black"></video>
-                <canvas id="canvas" class="hidden"></canvas>
-                <div class="p-4 flex justify-between items-center bg-slate-900">
-                    <button id="closeCameraBtn" class="text-slate-400 hover:text-white text-sm font-medium">취소</button>
-                    <button id="captureBtn" class="w-12 h-12 rounded-full bg-white border-4 border-emerald-500 hover:bg-slate-100 transition shadow-lg flex items-center justify-center">
-                        <div class="w-8 h-8 rounded-full bg-emerald-500"></div>
+                    <!-- Room Password -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">학급 입장 비밀번호 <span class="text-sky-500">*</span></label>
+                        <input type="password" id="inputClassPass" required placeholder="비밀번호 입력 (약 30명 공유용)" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm font-medium transition">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 pt-1">
+                        <!-- Student Number -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">반 / 번호 <span class="text-sky-500">*</span></label>
+                            <input type="text" id="inputStudentNum" required placeholder="예: 2반 14번" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm font-medium transition">
+                        </div>
+                        <!-- Student Name -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">이름 <span class="text-sky-500">*</span></label>
+                            <input type="text" id="inputStudentName" required placeholder="예: 홍길동" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm font-medium transition">
+                        </div>
+                    </div>
+
+                    <!-- Role Selector -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">내 역할 구분 <span class="text-sky-500">*</span></label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="roleRadio" value="student" checked class="peer sr-only">
+                                <div class="p-3 text-center rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 peer-checked:bg-sky-500 peer-checked:text-white peer-checked:border-sky-500 transition text-xs font-bold">
+                                    <i class="fa-solid fa-user-graduate block text-base mb-1"></i> 일반학생
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="roleRadio" value="leader" class="peer sr-only">
+                                <div class="p-3 text-center rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 peer-checked:bg-sky-500 peer-checked:text-white peer-checked:border-sky-500 transition text-xs font-bold">
+                                    <i class="fa-solid fa-crown block text-base mb-1"></i> 반장/부반장
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="roleRadio" value="teacher" class="peer sr-only">
+                                <div class="p-3 text-center rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 peer-checked:bg-sky-500 peer-checked:text-white peer-checked:border-sky-500 transition text-xs font-bold">
+                                    <i class="fa-solid fa-chalkboard-user block text-base mb-1"></i> 선생님
+                                </div>
+                            </label>
+                        </div>
+                        <p class="text-[11px] text-sky-600 dark:text-sky-400 mt-1.5 font-medium">* 반장과 선생님 권한은 수행평가 등록 권한을 가집니다.</p>
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 px-4 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl shadow-lg shadow-sky-500/30 transition transform active:scale-95 text-sm flex items-center justify-center gap-2">
+                        <span>학급 입장하기</span>
+                        <i class="fa-solid fa-right-to-bracket"></i>
                     </button>
-                    <div class="w-8"></div>
-                </div>
+                </form>
             </div>
         </div>
 
-        <!-- LOADING STATE -->
-        <div id="loadingState" class="hidden glass-card rounded-2xl p-8 text-center space-y-4">
-            <div class="w-16 h-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center pulse-slow">
-                <i data-lucide="brain-circuit" class="w-8 h-8 text-emerald-600"></i>
-            </div>
-            <div>
-                <h3 class="text-lg font-bold text-slate-800">AI가 음식을 분석 중입니다...</h3>
-                <p class="text-sm text-slate-500 mt-1">급식 식판 메뉴 구분, 칼로리 계산 및 주요 영양성분을 측정하고 있어요.</p>
-            </div>
-            <div class="w-full bg-slate-100 rounded-full h-2 max-w-md mx-auto overflow-hidden">
-                <div class="bg-emerald-500 h-2 rounded-full animate-pulse w-3/4"></div>
-            </div>
-        </div>
+        <!-- Main Dashboard View -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left & Center: Calendar View (lg:col-span-8) -->
+            <section class="lg:col-span-8 flex flex-col space-y-6">
+                
+                <!-- Calendar Card -->
+                <div class="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-3xl p-5 sm:p-6 shadow-sm transition-colors">
+                    
+                    <!-- Calendar Header -->
+                    <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+                        <div class="flex items-center gap-3">
+                            <h2 id="calendarMonthYear" class="text-xl sm:text-2xl font-black text-slate-800 dark:text-white">2026년 7월</h2>
+                            <div class="flex items-center bg-slate-100 dark:bg-zinc-800 rounded-xl p-1">
+                                <button onclick="changeMonth(-1)" class="p-1.5 hover:bg-white dark:hover:bg-zinc-700 rounded-lg text-slate-600 dark:text-zinc-300 transition">
+                                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                                </button>
+                                <button onclick="goToCurrentMonth()" class="px-2 py-0.5 text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline">오늘</button>
+                                <button onclick="changeMonth(1)" class="p-1.5 hover:bg-white dark:hover:bg-zinc-700 rounded-lg text-slate-600 dark:text-zinc-300 transition">
+                                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
 
-        <!-- RESULT SECTION -->
-        <div id="resultContainer" class="hidden space-y-5">
-            <!-- Total Calorie Banner -->
-            <div class="glass-card rounded-2xl p-6 border-l-4 border-l-emerald-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <span class="text-xs font-semibold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md">총 칼로리 측정 결과</span>
-                    <div class="flex items-baseline gap-2 mt-2">
-                        <span id="totalCalories" class="text-4xl font-extrabold text-slate-900">0</span>
-                        <span class="text-slate-500 font-medium">kcal</span>
+                        <!-- Role Privileged Add Task Button -->
+                        <button id="addEvaluationBtn" onclick="openAddTaskModal()" class="hidden bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md shadow-sky-500/20 transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>수행평가 등록</span>
+                        </button>
                     </div>
-                    <p id="mealAssessment" class="text-sm text-slate-600 mt-1"></p>
-                </div>
-                <button id="saveHistoryBtn" class="px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium text-xs sm:text-sm rounded-xl transition flex items-center gap-1.5 self-end sm:self-center">
-                    <i data-lucide="bookmark" class="w-4 h-4"></i>
-                    기록 저장하기
-                </button>
-            </div>
 
-            <!-- Macronutrients Breakdown -->
-            <div class="glass-card rounded-2xl p-5 space-y-3">
-                <h4 class="font-semibold text-slate-800 text-sm flex items-center gap-1.5">
-                    <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-600"></i>
-                    3대 영양소 (탄·단·지) 구성
-                </h4>
-                <div class="grid grid-cols-3 gap-3">
-                    <div class="bg-amber-50/70 border border-amber-100 rounded-xl p-3 text-center">
-                        <span class="text-xs text-amber-700 font-medium">탄수화물</span>
-                        <p id="carbs" class="text-lg font-bold text-amber-900 mt-0.5">0g</p>
+                    <!-- Days Header -->
+                    <div class="grid grid-cols-7 gap-1 text-center font-bold text-xs text-slate-400 dark:text-zinc-500 mb-2">
+                        <div class="text-red-500">일</div>
+                        <div>월</div>
+                        <div>화</div>
+                        <div>수</div>
+                        <div>목</div>
+                        <div>금</div>
+                        <div class="text-sky-500">토</div>
                     </div>
-                    <div class="bg-rose-50/70 border border-rose-100 rounded-xl p-3 text-center">
-                        <span class="text-xs text-rose-700 font-medium">단백질</span>
-                        <p id="protein" class="text-lg font-bold text-rose-900 mt-0.5">0g</p>
-                    </div>
-                    <div class="bg-blue-50/70 border border-blue-100 rounded-xl p-3 text-center">
-                        <span class="text-xs text-blue-700 font-medium">지방</span>
-                        <p id="fat" class="text-lg font-bold text-blue-900 mt-0.5">0g</p>
+
+                    <!-- Days Grid -->
+                    <div id="calendarGrid" class="grid grid-cols-7 gap-1 sm:gap-2">
+                        <!-- Dynamic Calendar Cells Generated via JS -->
                     </div>
                 </div>
-                <!-- Additional info line -->
-                <div class="flex justify-between items-center text-xs text-slate-500 px-1 pt-1">
-                    <span>나트륨 추정치: <strong id="sodium" class="text-slate-700">0mg</strong></span>
-                    <span>당류 추정치: <strong id="sugar" class="text-slate-700">0g</strong></span>
-                </div>
-            </div>
 
-            <!-- Itemized Food Breakdown -->
-            <div class="glass-card rounded-2xl p-5 space-y-3">
-                <h4 class="font-semibold text-slate-800 text-sm flex items-center gap-1.5">
-                    <i data-lucide="list" class="w-4 h-4 text-emerald-600"></i>
-                    식별된 반찬 / 메뉴별 세부 칼로리
-                </h4>
-                <div id="foodItemsList" class="divide-y divide-slate-100">
-                    <!-- Dynamic items inserted here -->
-                </div>
-            </div>
-
-            <!-- AI Health & Nutrition Tips -->
-            <div class="bg-emerald-900 text-emerald-50 rounded-2xl p-5 space-y-2">
-                <h4 class="font-semibold text-sm flex items-center gap-1.5 text-emerald-300">
-                    <i data-lucide="lightbulb" class="w-4 h-4"></i>
-                    AI 영양사의 피드백 & 식단 조언
-                </h4>
-                <p id="healthTip" class="text-sm leading-relaxed text-emerald-100"></p>
-            </div>
-        </div>
-
-        <!-- USER FEEDBACK BOARD SECTION -->
-        <div class="glass-card rounded-2xl p-5 shadow-sm space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 class="font-semibold text-slate-800 flex items-center gap-2">
-                    <i data-lucide="message-square" class="w-5 h-5 text-emerald-600"></i>
-                    사용자 의견 게시판
-                </h3>
-                <span class="text-xs text-slate-400">실시간 피드백</span>
-            </div>
-
-            <!-- Feedback Input Form -->
-            <form id="feedbackForm" class="space-y-3">
-                <div class="flex gap-2">
-                    <input type="text" id="feedbackAuthor" placeholder="작성자 (닉네임)" required maxlength="15" class="w-1/3 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    <input type="text" id="feedbackContent" placeholder="의견이나 피드백을 남겨주세요..." required class="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                </div>
-                <div class="flex justify-end">
-                    <button type="submit" id="submitFeedbackBtn" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition flex items-center gap-1.5 shadow-sm">
-                        <i data-lucide="send" class="w-4 h-4"></i>
-                        등록
-                    </button>
-                </div>
-            </form>
-
-            <!-- Feedback List -->
-            <div id="feedbackList" class="space-y-3 pt-2 divide-y divide-slate-100">
-                <p class="text-xs text-slate-400 text-center py-4">의견을 불러오는 중입니다...</p>
-            </div>
-        </div>
-
-        <!-- HISTORY MODAL -->
-        <div id="historyModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex justify-end">
-            <div class="bg-white w-full max-w-md h-full shadow-2xl p-6 overflow-y-auto flex flex-col justify-between">
-                <div>
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <i data-lucide="history" class="w-5 h-5 text-emerald-600"></i>
-                            식단 기록 히스토리
+                <!-- Selected Date Task Details Box -->
+                <div class="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-3xl p-5 sm:p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-sky-500"></i>
+                            <span id="selectedDateTitle">선택된 날짜 수행평가</span>
                         </h3>
-                        <button id="closeHistoryBtn" class="p-1 rounded-lg text-slate-400 hover:text-slate-600">
-                            <i data-lucide="x" class="w-5 h-5"></i>
-                        </button>
+                        <span id="taskCountBadge" class="text-xs bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-300 font-bold px-2.5 py-1 rounded-full">0건</span>
                     </div>
-                    <div id="historyList" class="space-y-3">
-                        <!-- Dynamic history logs -->
+
+                    <div id="selectedDateTasksList" class="space-y-3">
+                        <!-- Dynamic Selected Day Task Cards -->
+                        <div class="text-center py-8 text-slate-400 dark:text-zinc-600 text-xs">
+                            <i class="fa-regular fa-calendar-xmark text-3xl mb-2 block"></i>
+                            선택된 날짜에 예정된 수행평가가 없습니다.
+                        </div>
                     </div>
                 </div>
-                <div class="pt-4 border-t border-slate-100">
-                    <button id="clearHistoryBtn" class="w-full py-2 bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg hover:bg-slate-200 transition">
-                        기록 전체 삭제
+
+            </section>
+
+            <!-- Right Panel: Upcoming D-Days & Teacher Makeup Hub (lg:col-span-4) -->
+            <aside class="lg:col-span-4 flex flex-col space-y-6">
+                
+                <!-- D-Day Urgent Tasks Card -->
+                <div class="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-3xl p-5 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-fire text-amber-500 animate-bounce"></i>
+                            <span>다가오는 수행평가 (D-Day)</span>
+                        </h3>
+                    </div>
+
+                    <div id="upcomingTasksList" class="space-y-3 max-h-[320px] overflow-y-auto custom-scrollbar pr-1">
+                        <!-- Dynamic Upcoming Task Cards -->
+                    </div>
+                </div>
+
+                <!-- Teacher Special Section: Makeup Exam Assignment for Absent Students -->
+                <div id="teacherMakeupSection" class="hidden bg-gradient-to-br from-sky-50 to-indigo-50/50 dark:from-zinc-900 dark:to-sky-950/30 border border-sky-200/60 dark:border-sky-900/40 rounded-3xl p-5 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
+                            <i class="fa-solid fa-user-clock text-sky-500"></i>
+                            <span>결석자/미응시자 보충 수행 지정</span>
+                        </h3>
+                        <span class="text-[10px] bg-sky-500 text-white font-extrabold px-2 py-0.5 rounded-full">선생님 특권</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-zinc-400 mb-4">
+                        결석 등으로 수행을 못 본 학생에게 개별 연락 및 보충 시험 날짜와 시간을 지정합니다.
+                    </p>
+
+                    <button onclick="openAssignMakeupModal()" class="w-full py-2.5 px-3 bg-white dark:bg-zinc-800 hover:bg-sky-500 hover:text-white text-sky-600 dark:text-sky-300 font-bold text-xs rounded-xl border border-sky-200 dark:border-zinc-700 shadow-sm transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>미응시 학생 지정 & 일시 전송</span>
                     </button>
                 </div>
+
+                <!-- Personal Makeup Schedule & Notice Inbox -->
+                <div class="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-3xl p-5 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2 text-sm">
+                            <i class="fa-solid fa-envelope-open-text text-sky-500"></i>
+                            <span>내 개별 보충 수행 알림</span>
+                        </h3>
+                        <span id="personalMakeupCount" class="text-[10px] bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-300 font-bold px-2 py-0.5 rounded-full">0건</span>
+                    </div>
+
+                    <div id="personalMakeupList" class="space-y-3">
+                        <!-- Dynamic Personal Makeup Items -->
+                        <div class="text-center py-6 text-slate-400 dark:text-zinc-600 text-xs">
+                            지정된 보충 수행평가가 없습니다.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Class Members Roster Box -->
+                <div class="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-3xl p-5 shadow-sm">
+                    <h3 class="font-bold text-slate-800 dark:text-white mb-3 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-users text-sky-500"></i>
+                        <span>우리 반 참가자 명단</span>
+                    </h3>
+                    <div id="classMemberList" class="flex flex-wrap gap-1.5 max-h-[150px] overflow-y-auto custom-scrollbar">
+                        <!-- Dynamic Student Tags -->
+                    </div>
+                </div>
+
+            </aside>
+        </main>
+
+        <!-- Modal 2: Add Task Modal (Teacher/Leader Privilege) -->
+        <div id="addTaskModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm">
+            <div class="bg-white dark:bg-zinc-900 border border-sky-100 dark:border-zinc-800 rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 space-y-5 relative">
+                
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
+                    <h3 class="font-extrabold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-pen-to-square text-sky-500"></i>
+                        <span>새 수행평가 등록</span>
+                    </h3>
+                    <button onclick="closeAddTaskModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <form id="addTaskForm" onsubmit="handleAddTaskSubmit(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">과목명 <span class="text-sky-500">*</span></label>
+                        <input type="text" id="taskSubject" required placeholder="예: 국어, 수학, 통합과학" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">수행평가 제목 <span class="text-sky-500">*</span></label>
+                        <input type="text" id="taskTitle" required placeholder="예: 독서 논술문 작성 및 발표" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">마감/시행 날짜 <span class="text-sky-500">*</span></label>
+                            <input type="date" id="taskDate" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">교시 / 시간</label>
+                            <input type="text" id="taskTime" placeholder="예: 3교시 또는 14:00" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">준비물 및 세부 내용</label>
+                        <textarea id="taskDesc" rows="3" placeholder="필기구, 수행지 작성 요령, 참고 자료 등 입력" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm"></textarea>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeAddTaskModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 font-bold text-xs text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800">취소</button>
+                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-md shadow-sky-500/30">등록하기</button>
+                    </div>
+                </form>
             </div>
         </div>
 
-    </main>
+        <!-- Modal 3: Assign Makeup Exam to Absent Student (Teacher Exclusive) -->
+        <div id="assignMakeupModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm">
+            <div class="bg-white dark:bg-zinc-900 border border-sky-100 dark:border-zinc-800 rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 space-y-5 relative">
+                
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
+                    <h3 class="font-extrabold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-paper-plane text-sky-500"></i>
+                        <span>결석자 보충 수행 일정 지정</span>
+                    </h3>
+                    <button onclick="closeAssignMakeupModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
 
-    <footer class="bg-white border-t border-slate-200 py-4 mt-8">
-        <div class="max-w-3xl mx-auto px-4 text-center text-xs text-slate-400">
-            Powered by Google Gemini API & Vercel Serverless Functions
+                <form id="assignMakeupForm" onsubmit="handleAssignMakeupSubmit(event)" class="space-y-4">
+                    <!-- Student Selector -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">대상 학생 이름 / 번호 <span class="text-sky-500">*</span></label>
+                        <input type="text" id="makeupTargetStudent" required placeholder="예: 14번 홍길동" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm">
+                    </div>
+
+                    <!-- Subject / Evaluation Name -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">보충 수행 과목 & 제목 <span class="text-sky-500">*</span></label>
+                        <input type="text" id="makeupSubject" required placeholder="예: [수학] 이차방정식 단원 수행 보충" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm">
+                    </div>
+
+                    <!-- Makeup Date & Time -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">재시 수행 날짜 <span class="text-sky-500">*</span></label>
+                            <input type="date" id="makeupDate" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">시작 시간 및 장소 <span class="text-sky-500">*</span></label>
+                            <input type="text" id="makeupTime" required placeholder="예: 16:30 (수학 교무실)" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Direct Message / Instruction -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">선생님 개별 전달사항</label>
+                        <textarea id="makeupNote" rows="3" placeholder="예: 결석으로 인한 미응시 보충평가입니다. 필기구 지참 후 오세요." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm"></textarea>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeAssignMakeupModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 font-bold text-xs text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800">취소</button>
+                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-md shadow-sky-500/30 flex items-center gap-1.5">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>전달하기</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </footer>
+
+        <!-- Custom Toast Alert Message -->
+        <div id="toastMessage" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-bold">
+            <i id="toastIcon" class="fa-solid fa-circle-check text-sky-400"></i>
+            <span id="toastText">처리되었습니다.</span>
+        </div>
+
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyAzMqH_B4ufSnekfFiDzYGj6FhVhX9QeDQ",
-            authDomain: "board-8dc6f.firebaseapp.com",
-            projectId: "board-8dc6f",
-            storageBucket: "board-8dc6f.firebasestorage.app",
-            messagingSenderId: "1093315248227",
-            appId: "1:1093315248227:web:940c6970035a91c83a3856"
+        // Global variables provided by Canvas or Defaults
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'class-sync-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "demo-api-key",
+            authDomain: "demo.firebaseapp.com",
+            projectId: "demo-project",
+            storageBucket: "demo.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'board-8dc6f';
-        const feedbackColRef = collection(db, 'artifacts', appId, 'public', 'data', 'feedback');
-
-        // Authenticate Anonymously before Firestore operations
-        signInAnonymously(auth).then(() => {
-            initBoardListener();
-        }).catch((err) => {
-            console.error("Firebase Auth error:", err);
-            initBoardListener();
-        });
-
-        // Submit Board Entry
-        const feedbackForm = document.getElementById('feedbackForm');
-        const feedbackAuthor = document.getElementById('feedbackAuthor');
-        const feedbackContent = document.getElementById('feedbackContent');
-        const submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
-
-        if (feedbackForm) {
-            feedbackForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const author = feedbackAuthor.value.trim();
-                const content = feedbackContent.value.trim();
-
-                if (!author || !content) return;
-
-                submitFeedbackBtn.disabled = true;
-                submitFeedbackBtn.classList.add('opacity-50');
-
-                try {
-                    await addDoc(feedbackColRef, {
-                        author: author,
-                        content: content,
-                        createdAt: Date.now()
-                    });
-                    feedbackContent.value = '';
-                } catch (err) {
-                    console.error("Firestore post error:", err);
-                    alert("글 작성 중 오류가 발생했습니다.");
-                } finally {
-                    submitFeedbackBtn.disabled = false;
-                    submitFeedbackBtn.classList.remove('opacity-50');
-                }
-            });
+        // Firebase Initialization
+        let app, db, auth;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch(e) {
+            console.log("Firebase fallback initialization", e);
         }
 
-        // Realtime Listener & Sort (Newest first)
-        function initBoardListener() {
-            onSnapshot(feedbackColRef, (snapshot) => {
-                const feedbackList = document.getElementById('feedbackList');
-                if (!feedbackList) return;
+        // Application State
+        let currentUser = {
+            classCode: '',
+            classPass: '',
+            studentNum: '',
+            name: '',
+            role: 'student' // 'student', 'leader', 'teacher'
+        };
 
-                const docs = [];
-                snapshot.forEach(doc => {
-                    docs.push({ id: doc.id, ...doc.data() });
-                });
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth(); // 0-indexed
+        let selectedDateStr = formatDateKey(new Date());
 
-                // Sort in memory: newest first
-                docs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        let tasksData = [];
+        let makeupsData = [];
+        let membersData = [];
 
-                if (docs.length === 0) {
-                    feedbackList.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">등록된 의견이 없습니다. 첫 번째 의견을 남겨보세요!</p>`;
-                    return;
-                }
+        let tasksUnsubscribe = null;
+        let makeupsUnsubscribe = null;
+        let membersUnsubscribe = null;
 
-                feedbackList.innerHTML = docs.map(item => {
-                    const dateStr = item.createdAt ? new Date(item.createdAt).toLocaleString('ko-KR', {
-                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                    }) : '방금 전';
-
-                    return `
-                        <div class="pt-3 flex flex-col space-y-1">
-                            <div class="flex items-center justify-between text-xs">
-                                <span class="font-semibold text-slate-700 flex items-center gap-1">
-                                    <i data-lucide="user" class="w-3.5 h-3.5 text-emerald-600"></i>
-                                    ${escapeHtml(item.author || '익명')}
-                                </span>
-                                <span class="text-slate-400 text-[11px]">${dateStr}</span>
-                            </div>
-                            <p class="text-sm text-slate-800 break-words font-normal pl-4 border-l-2 border-emerald-100 mt-1">${escapeHtml(item.content || '')}</p>
-                        </div>
-                    `;
-                }).join('');
-
-                if (window.lucide && typeof window.lucide.createIcons === 'function') {
-                    window.lucide.createIcons();
-                }
-            }, (error) => {
-                console.error("Firestore snapshot error:", error);
-                const feedbackList = document.getElementById('feedbackList');
-                if (feedbackList) {
-                    feedbackList.innerHTML = `<p class="text-xs text-rose-500 text-center py-4">의견 목록을 불러오는데 실패했습니다.</p>`;
-                }
-            });
+        function formatDateKey(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
         }
 
-        function escapeHtml(str) {
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-    </script>
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toastMessage');
+            const toastText = document.getElementById('toastText');
+            const toastIcon = document.getElementById('toastIcon');
 
-    <script>
-        lucide.createIcons();
+            toastText.textContent = msg;
+            toastIcon.className = isError ? "fa-solid fa-circle-xmark text-red-400" : "fa-solid fa-circle-check text-sky-400";
 
-        // State Variables
-        let selectedBase64Image = null;
-        let lastAnalysisResult = null;
-        let mediaStream = null;
-
-        // DOM Elements
-        const fileInput = document.getElementById('fileInput');
-        const dropZone = document.getElementById('dropZone');
-        const uploadPrompt = document.getElementById('uploadPrompt');
-        const previewContainer = document.getElementById('previewContainer');
-        const imagePreview = document.getElementById('imagePreview');
-        const fileName = document.getElementById('fileName');
-        const resetBtn = document.getElementById('resetBtn');
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        const loadingState = document.getElementById('loadingState');
-        const resultContainer = document.getElementById('resultContainer');
-        const cameraBtn = document.getElementById('cameraBtn');
-        const cameraModal = document.getElementById('cameraModal');
-        const webcam = document.getElementById('webcam');
-        const canvas = document.getElementById('canvas');
-        const captureBtn = document.getElementById('captureBtn');
-        const closeCameraBtn = document.getElementById('closeCameraBtn');
-
-        // History Modal Elements
-        const historyToggleBtn = document.getElementById('historyToggleBtn');
-        const historyModal = document.getElementById('historyModal');
-        const closeHistoryBtn = document.getElementById('closeHistoryBtn');
-        const historyList = document.getElementById('historyList');
-        const saveHistoryBtn = document.getElementById('saveHistoryBtn');
-        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-
-        // Event Listeners for File Selection
-        dropZone.addEventListener('click', (e) => {
-            if (e.target.closest('#cameraBtn')) return;
-            fileInput.click();
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) handleFile(file);
-        });
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('border-emerald-500', 'bg-emerald-50/50');
-        });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('border-emerald-500', 'bg-emerald-50/50');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('border-emerald-500', 'bg-emerald-50/50');
-            const file = e.dataTransfer.files[0];
-            if (file) handleFile(file);
-        });
-
-        function handleFile(file) {
-            if (!file.type.startsWith('image/')) {
-                alert('이미지 파일만 선택해 주세요.');
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                selectedBase64Image = e.target.result;
-                imagePreview.src = selectedBase64Image;
-                fileName.textContent = file.name || '카메라 촬영 사진';
-                uploadPrompt.classList.add('hidden');
-                previewContainer.classList.remove('hidden');
-                resetBtn.classList.remove('hidden');
-                
-                // Enable Analyze button
-                analyzeBtn.disabled = false;
-                analyzeBtn.classList.remove('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
-                analyzeBtn.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-700', 'shadow-emerald-200');
-            };
-            reader.readAsDataURL(file);
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
         }
 
-        resetBtn.addEventListener('click', () => {
-            selectedBase64Image = null;
-            fileInput.value = '';
-            uploadPrompt.classList.remove('hidden');
-            previewContainer.classList.add('hidden');
-            resetBtn.classList.add('hidden');
-            resultContainer.classList.add('hidden');
-            
-            analyzeBtn.disabled = true;
-            analyzeBtn.classList.add('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
-            analyzeBtn.classList.remove('bg-emerald-600', 'text-white', 'hover:bg-emerald-700', 'shadow-emerald-200');
-        });
-
-        // Web Camera Logic
-        cameraBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            try {
-                mediaStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' },
-                    audio: false
-                });
-                webcam.srcObject = mediaStream;
-                cameraModal.classList.remove('hidden');
-            } catch (err) {
-                alert('카메라 접근 권한을 허용해 주시거나 지원하지 않는 브라우저입니다.');
-            }
-        });
-
-        function stopCamera() {
-            if (mediaStream) {
-                mediaStream.getTracks().forEach(track => track.stop());
-                mediaStream = null;
-            }
-            cameraModal.classList.add('hidden');
-        }
-
-        closeCameraBtn.addEventListener('click', stopCamera);
-
-        captureBtn.addEventListener('click', () => {
-            const context = canvas.getContext('2d');
-            canvas.width = webcam.videoWidth;
-            canvas.height = webcam.videoHeight;
-            context.drawImage(webcam, 0, 0, canvas.width, canvas.height);
-            
-            const dataUrl = canvas.toDataURL('image/jpeg');
-            fetch(dataUrl)
-                .then(res => res.blob())
-                .then(blob => {
-                    const file = new File([blob], "camera_photo.jpg", { type: "image/jpeg" });
-                    handleFile(file);
-                });
-
-            stopCamera();
-        });
-
-        analyzeBtn.addEventListener('click', async () => {
-            if (!selectedBase64Image) return;
-
-            // UI loading transition
-            loadingState.classList.remove('hidden');
-            resultContainer.classList.add('hidden');
-            analyzeBtn.disabled = true;
-
-            try {
-                const response = await fetch('/api/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: selectedBase64Image })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || '음식 분석 중 오류가 발생했습니다.');
-                }
-
-                renderResults(data);
-            } catch (err) {
-                alert(`오류: ${err.message}`);
-            } finally {
-                loadingState.classList.add('hidden');
-                analyzeBtn.disabled = false;
-            }
-        });
-
-        function renderResults(data) {
-            lastAnalysisResult = data;
-
-            document.getElementById('totalCalories').textContent = data.totalCalories || 0;
-            document.getElementById('carbs').textContent = `${data.carbs || 0}g`;
-            document.getElementById('protein').textContent = `${data.protein || 0}g`;
-            document.getElementById('fat').textContent = `${data.fat || 0}g`;
-            document.getElementById('sodium').textContent = `${data.sodium || 0}mg`;
-            document.getElementById('sugar').textContent = `${data.sugar || 0}g`;
-            document.getElementById('mealAssessment').textContent = data.summary || '균형 잡힌 식단입니다.';
-            document.getElementById('healthTip').textContent = data.healthTip || '탄수화물과 단백질이 조화를 이룬 식단입니다.';
-
-            // Render Item List
-            const foodItemsList = document.getElementById('foodItemsList');
-            foodItemsList.innerHTML = '';
-
-            if (data.items && data.items.length > 0) {
-                data.items.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'py-2.5 flex items-center justify-between text-sm';
-                    div.innerHTML = `
-                        <div class="flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                            <span class="font-medium text-slate-800">${item.name}</span>
-                            <span class="text-xs text-slate-400">(${item.portion || '1인분'})</span>
-                        </div>
-                        <span class="font-semibold text-slate-700">${item.calories} kcal</span>
-                    `;
-                    foodItemsList.appendChild(div);
-                });
+        // Dark / Light Mode Toggle Logic
+        window.toggleDarkMode = function() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('themeIcon');
+            if (isDark) {
+                icon.className = 'fa-solid fa-sun text-yellow-400 text-lg';
             } else {
-                foodItemsList.innerHTML = `<p class="text-xs text-slate-400 py-2">세부 항목을 구분할 수 없습니다.</p>`;
+                icon.className = 'fa-solid fa-moon text-lg';
             }
+        };
 
-            resultContainer.classList.remove('hidden');
-            resultContainer.scrollIntoView({ behavior: 'smooth' });
-        }
+        // Date navigation
+        window.changeMonth = function(delta) {
+            currentMonth += delta;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            } else if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar();
+        };
 
-        // History Management
-        saveHistoryBtn.addEventListener('click', () => {
-            if (!lastAnalysisResult) return;
+        window.goToCurrentMonth = function() {
+            const today = new Date();
+            currentYear = today.getFullYear();
+            currentMonth = today.getMonth();
+            selectedDateStr = formatDateKey(today);
+            renderCalendar();
+            renderSelectedDateTasks();
+        };
 
-            const history = JSON.parse(localStorage.getItem('food_history') || '[]');
-            const record = {
-                id: Date.now(),
-                date: new Date().toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                calories: lastAnalysisResult.totalCalories,
-                summary: lastAnalysisResult.summary,
-                image: selectedBase64Image
-            };
+        window.handleGatewaySubmit = async function(e) {
+            e.preventDefault();
+            const classCode = document.getElementById('inputClassCode').value.trim();
+            const classPass = document.getElementById('inputClassPass').value.trim();
+            const studentNum = document.getElementById('inputStudentNum').value.trim();
+            const studentName = document.getElementById('inputStudentName').value.trim();
+            const role = document.querySelector('input[name="roleRadio"]:checked').value;
 
-            history.unshift(record);
-            localStorage.setItem('food_history', JSON.stringify(history));
-            alert('기록에 저장되었습니다!');
-            renderHistory();
-        });
-
-        function renderHistory() {
-            const history = JSON.parse(localStorage.getItem('food_history') || '[]');
-            historyList.innerHTML = '';
-
-            if (history.length === 0) {
-                historyList.innerHTML = `<p class="text-xs text-slate-400 text-center py-8">저장된 기록이 없습니다.</p>`;
+            if (!classCode || !classPass || !studentName) {
+                showToast("모든 항목을 입력해 주세요.", true);
                 return;
             }
 
-            history.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'p-3 rounded-xl border border-slate-200 bg-slate-50 flex gap-3 items-center';
-                card.innerHTML = `
-                    <img src="${item.image}" class="w-12 h-12 rounded-lg object-cover bg-slate-200">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex justify-between items-baseline">
-                            <span class="text-xs font-semibold text-emerald-600">${item.calories} kcal</span>
-                            <span class="text-[10px] text-slate-400">${item.date}</span>
-                        </div>
-                        <p class="text-xs text-slate-700 font-medium truncate mt-0.5">${item.summary || '식단 기록'}</p>
+            // Authenticate with Firebase if custom token or anonymous
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.warn("Auth warning:", err);
+            }
+
+            currentUser = {
+                classCode,
+                classPass,
+                studentNum,
+                name: studentName,
+                role
+            };
+
+            // Register / Update Roster member
+            try {
+                if (db) {
+                    const memberDocId = `${classCode}_${studentNum}_${studentName}`.replace(/[^a-zA-Z0-9_]/g, '_');
+                    const memberRef = doc(db, 'artifacts', appId, 'public', 'data', `members_${classCode}`, memberDocId);
+                    await setDoc(memberRef, {
+                        num: studentNum,
+                        name: studentName,
+                        role,
+                        joinedAt: new Date().toISOString()
+                    });
+                }
+            } catch (err) {
+                console.error("Error setting member", err);
+            }
+
+            // Update UI elements for current user
+            document.getElementById('gatewayModal').classList.add('hidden');
+            document.getElementById('userProfileArea').classList.remove('hidden');
+            document.getElementById('userNameDisplay').textContent = studentName;
+            document.getElementById('userNumDisplay').textContent = `${studentNum}`;
+
+            const headerRoleBadge = document.getElementById('headerRoleBadge');
+            headerRoleBadge.classList.remove('hidden');
+            if (role === 'teacher') {
+                headerRoleBadge.textContent = '선생님';
+                headerRoleBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-300";
+                document.getElementById('addEvaluationBtn').classList.remove('hidden');
+                document.getElementById('teacherMakeupSection').classList.remove('hidden');
+            } else if (role === 'leader') {
+                headerRoleBadge.textContent = '반장';
+                headerRoleBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-300";
+                document.getElementById('addEvaluationBtn').classList.remove('hidden');
+                document.getElementById('teacherMakeupSection').classList.add('hidden');
+            } else {
+                headerRoleBadge.textContent = '일반 학생';
+                headerRoleBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300 border border-sky-300";
+                document.getElementById('addEvaluationBtn').classList.add('hidden');
+                document.getElementById('teacherMakeupSection').classList.add('hidden');
+            }
+
+            document.getElementById('headerClassTitle').textContent = `${classCode} 반 수행평가 공유방`;
+
+            // Subscribe to Firestore collections for this class room
+            subscribeClassData();
+            showToast(`${studentName}님, ${classCode} 학급방에 입장하셨습니다!`);
+        };
+
+        window.leaveClassRoom = function() {
+            if (tasksUnsubscribe) tasksUnsubscribe();
+            if (makeupsUnsubscribe) makeupsUnsubscribe();
+            if (membersUnsubscribe) membersUnsubscribe();
+
+            document.getElementById('gatewayModal').classList.remove('hidden');
+            document.getElementById('userProfileArea').classList.add('hidden');
+            showToast("학급방에서 퇴장하였습니다.");
+        };
+
+        function subscribeClassData() {
+            if (!db || !currentUser.classCode) {
+                // Fallback local memory data if offline or no DB
+                renderAllViews();
+                return;
+            }
+
+            // 1. Subscribe to Class Tasks
+            const tasksCol = collection(db, 'artifacts', appId, 'public', 'data', `tasks_${currentUser.classCode}`);
+            tasksUnsubscribe = onSnapshot(tasksCol, (snapshot) => {
+                tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderAllViews();
+                checkD1Tasks();
+            }, (err) => console.error("Tasks sync error", err));
+
+            // 2. Subscribe to Class Makeup Assignments
+            const makeupsCol = collection(db, 'artifacts', appId, 'public', 'data', `makeups_${currentUser.classCode}`);
+            makeupsUnsubscribe = onSnapshot(makeupsCol, (snapshot) => {
+                makeupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderPersonalMakeups();
+            }, (err) => console.error("Makeups sync error", err));
+
+            // 3. Subscribe to Class Members Roster
+            const membersCol = collection(db, 'artifacts', appId, 'public', 'data', `members_${currentUser.classCode}`);
+            membersUnsubscribe = onSnapshot(membersCol, (snapshot) => {
+                membersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderClassMembers();
+            }, (err) => console.error("Members sync error", err));
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
+            document.getElementById('calendarMonthYear').textContent = `${currentYear}년 ${monthNames[currentMonth]}`;
+
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay(); // 0 = Sun
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+            const todayStr = formatDateKey(new Date());
+
+            // Empty cells before day 1
+            for (let i = 0; i < firstDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = "min-h-[70px] sm:min-h-[85px] bg-slate-50/50 dark:bg-zinc-950/40 rounded-2xl p-1 border border-transparent";
+                grid.appendChild(emptyCell);
+            }
+
+            // Fill Month Days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayDateObj = new Date(currentYear, currentMonth, day);
+                const dateKey = formatDateKey(dayDateObj);
+                const dayOfWeek = dayDateObj.getDay();
+
+                const cell = document.createElement('div');
+                const isSelected = dateKey === selectedDateStr;
+                const isToday = dateKey === todayStr;
+
+                let bgClass = "bg-slate-50 dark:bg-zinc-800/60 hover:bg-sky-50 dark:hover:bg-zinc-800";
+                if (isSelected) {
+                    bgClass = "bg-sky-100 dark:bg-sky-950/80 border-2 border-sky-500 shadow-md";
+                } else if (isToday) {
+                    bgClass = "bg-sky-50 dark:bg-sky-900/30 border border-sky-300 dark:border-sky-700";
+                }
+
+                cell.className = `min-h-[70px] sm:min-h-[85px] rounded-2xl p-1.5 sm:p-2 cursor-pointer transition flex flex-col justify-between ${bgClass}`;
+                cell.onclick = () => {
+                    selectedDateStr = dateKey;
+                    renderCalendar();
+                    renderSelectedDateTasks();
+                };
+
+                // Day Number Header
+                let numColor = "text-slate-700 dark:text-zinc-200";
+                if (dayOfWeek === 0) numColor = "text-red-500 font-bold";
+                if (dayOfWeek === 6) numColor = "text-sky-500 font-bold";
+
+                const topRow = document.createElement('div');
+                topRow.className = "flex items-center justify-between";
+                topRow.innerHTML = `
+                    <span class="text-xs sm:text-sm font-bold ${numColor}">${day}</span>
+                    ${isToday ? '<span class="text-[9px] bg-sky-500 text-white font-extrabold px-1.5 py-0.2 rounded-full">오늘</span>' : ''}
+                `;
+                cell.appendChild(topRow);
+
+                // Task Badges inside cell
+                const dayTasks = tasksData.filter(t => t.date === dateKey);
+                const badgeContainer = document.createElement('div');
+                badgeContainer.className = "space-y-1 mt-1 overflow-hidden";
+
+                dayTasks.slice(0, 2).forEach(task => {
+                    const badge = document.createElement('div');
+                    badge.className = "text-[10px] font-semibold bg-sky-500 text-white truncate px-1.5 py-0.5 rounded-lg shadow-sm";
+                    badge.textContent = `[${task.subject}] ${task.title}`;
+                    badgeContainer.appendChild(badge);
+                });
+
+                if (dayTasks.length > 2) {
+                    const more = document.createElement('div');
+                    more.className = "text-[9px] text-sky-600 dark:text-sky-400 font-bold pl-1";
+                    more.textContent = `+${dayTasks.length - 2}개 더보기`;
+                    badgeContainer.appendChild(more);
+                }
+
+                cell.appendChild(badgeContainer);
+                grid.appendChild(cell);
+            }
+        }
+
+        function renderSelectedDateTasks() {
+            const listEl = document.getElementById('selectedDateTasksList');
+            const countBadge = document.getElementById('taskCountBadge');
+            const titleEl = document.getElementById('selectedDateTitle');
+
+            titleEl.textContent = `${selectedDateStr} 수행평가`;
+            const matched = tasksData.filter(t => t.date === selectedDateStr);
+            countBadge.textContent = `${matched.length}건`;
+
+            if (matched.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-8 text-slate-400 dark:text-zinc-600 text-xs">
+                        <i class="fa-regular fa-calendar-xmark text-3xl mb-2 block"></i>
+                        이 날짜에 등록된 수행평가가 없습니다.
                     </div>
                 `;
-                historyList.appendChild(card);
-            });
+                return;
+            }
+
+            listEl.innerHTML = matched.map(task => `
+                <div class="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-100 dark:border-zinc-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-sky-300 transition">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="bg-sky-500 text-white font-black text-xs px-2.5 py-0.5 rounded-lg">${task.subject}</span>
+                            <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base">${task.title}</h4>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-zinc-400 font-medium">
+                            <i class="fa-regular fa-clock mr-1 text-sky-500"></i> ${task.time || '교시 미정'} | 작성자: ${task.author || '반장/선생님'}
+                        </p>
+                        ${task.desc ? `<p class="text-xs text-slate-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 p-2.5 rounded-xl mt-2 border border-slate-100 dark:border-zinc-800">${task.desc}</p>` : ''}
+                    </div>
+
+                    ${(currentUser.role === 'teacher' || currentUser.role === 'leader') ? `
+                        <button onclick="deleteTask('${task.id}')" class="self-end sm:self-center px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition">
+                            <i class="fa-solid fa-trash-can mr-1"></i> 삭제
+                        </button>
+                    ` : ''}
+                </div>
+            `).join('');
         }
 
-        historyToggleBtn.addEventListener('click', () => {
-            renderHistory();
-            historyModal.classList.remove('hidden');
-        });
+        function renderUpcomingTasks() {
+            const listEl = document.getElementById('upcomingTasksList');
+            const today = new Date();
+            today.setHours(0,0,0,0);
 
-        closeHistoryBtn.addEventListener('click', () => historyModal.classList.add('hidden'));
+            // Filter upcoming or today tasks
+            const upcoming = tasksData.map(t => {
+                const taskDate = new Date(t.date);
+                taskDate.setHours(0,0,0,0);
+                const diffTime = taskDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return { ...t, diffDays };
+            }).filter(t => t.diffDays >= 0).sort((a,b) => a.diffDays - b.diffDays);
 
-        clearHistoryBtn.addEventListener('click', () => {
-            if (confirm('모든 기록을 삭제하시겠습니까?')) {
-                localStorage.removeItem('food_history');
-                renderHistory();
+            if (upcoming.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-6 text-slate-400 dark:text-zinc-600 text-xs">
+                        남아있는 수행평가 일정이 없습니다! 🥳
+                    </div>
+                `;
+                return;
             }
+
+            listEl.innerHTML = upcoming.map(t => {
+                let dDayBadge = `D-${t.diffDays}`;
+                let badgeStyle = "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300";
+                if (t.diffDays === 0) {
+                    dDayBadge = "D-DAY 오늘!";
+                    badgeStyle = "bg-red-500 text-white font-extrabold animate-pulse";
+                } else if (t.diffDays === 1) {
+                    dDayBadge = "D-1 내일!";
+                    badgeStyle = "bg-amber-500 text-white font-extrabold";
+                }
+
+                return `
+                    <div class="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-100 dark:border-zinc-800 flex items-center justify-between gap-2">
+                        <div class="space-y-0.5">
+                            <span class="text-[10px] font-extrabold text-sky-600 dark:text-sky-400">[${t.subject}]</span>
+                            <h5 class="text-xs font-bold text-slate-800 dark:text-zinc-100 line-clamp-1">${t.title}</h5>
+                            <p class="text-[10px] text-slate-400 dark:text-zinc-500">${t.date} ${t.time ? `(${t.time})` : ''}</p>
+                        </div>
+                        <span class="text-xs font-bold px-2.5 py-1 rounded-xl whitespace-nowrap shadow-sm ${badgeStyle}">
+                            ${dDayBadge}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function checkD1Tasks() {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
+            const d1Tasks = tasksData.filter(t => {
+                const taskDate = new Date(t.date);
+                taskDate.setHours(0,0,0,0);
+                const diffDays = Math.ceil((taskDate - today) / (1000 * 60 * 60 * 24));
+                return diffDays === 1;
+            });
+
+            const banner = document.getElementById('d1Banner');
+            const textEl = document.getElementById('d1BannerText');
+
+            if (d1Tasks.length > 0) {
+                banner.classList.remove('hidden');
+                textEl.textContent = `내일 수행평가 [${d1Tasks[0].subject}] ${d1Tasks[0].title} (${d1Tasks[0].time || '시행'}) 가 예정되어 있습니다!`;
+                
+                // Native Browser notification
+                if (Notification.permission === "granted") {
+                    new Notification("🚨 수행평가 D-1 알림!", {
+                        body: `내일 [${d1Tasks[0].subject}] ${d1Tasks[0].title} 수행평가가 있습니다. 준비를 완료하세요!`,
+                        icon: "https://cdn-icons-png.flaticon.com/512/2693/2693507.png"
+                    });
+                }
+            } else {
+                banner.classList.add('hidden');
+            }
+        }
+
+        window.closeD1Banner = function() {
+            document.getElementById('d1Banner').classList.add('hidden');
+        };
+
+        window.requestNotificationPermission = function() {
+            if ("Notification" in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        showToast("브라우저 알림이 켜졌습니다!");
+                    } else {
+                        showToast("알림 권한이 거부되었습니다.", true);
+                    }
+                });
+            } else {
+                showToast("이 브라우저는 푸시 알림을 지원하지 않습니다.", true);
+            }
+        };
+
+        function renderPersonalMakeups() {
+            const listEl = document.getElementById('personalMakeupList');
+            const badgeCount = document.getElementById('personalMakeupCount');
+            const notifDot = document.getElementById('makeupNotifDot');
+
+            // Filter items addressed to current student (matches name or student num)
+            const matched = makeupsData.filter(m => {
+                if (!currentUser.name) return false;
+                return m.targetStudent.includes(currentUser.name) || m.targetStudent.includes(currentUser.studentNum);
+            });
+
+            badgeCount.textContent = `${matched.length}건`;
+
+            if (matched.length > 0) {
+                notifDot.classList.remove('hidden');
+            } else {
+                notifDot.classList.add('hidden');
+            }
+
+            if (matched.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-6 text-slate-400 dark:text-zinc-600 text-xs">
+                        지정된 보충 수행평가가 없습니다.
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = matched.map(m => `
+                <div class="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                            <i class="fa-solid fa-bell"></i> ${m.subject}
+                        </span>
+                        <span class="text-[10px] text-amber-600 dark:text-amber-500 font-semibold">${m.date} ${m.time}</span>
+                    </div>
+                    <p class="text-xs text-slate-700 dark:text-zinc-200 font-medium">${m.note || '선생님이 지정하신 보충 수행평가입니다.'}</p>
+                    <div class="text-[10px] text-slate-500 dark:text-zinc-400 text-right">
+                        담당 선생님: ${m.teacherName || '선생님'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderClassMembers() {
+            const listEl = document.getElementById('classMemberList');
+            if (membersData.length === 0) {
+                listEl.innerHTML = `<span class="text-xs text-slate-400">참가자 없음</span>`;
+                return;
+            }
+
+            listEl.innerHTML = membersData.map(mem => {
+                let badgeBg = "bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300";
+                if (mem.role === 'teacher') badgeBg = "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold";
+                if (mem.role === 'leader') badgeBg = "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-bold";
+
+                return `
+                    <span class="text-xs px-2.5 py-1 rounded-xl ${badgeBg} border border-slate-200/50 dark:border-zinc-700/50 flex items-center gap-1">
+                        ${mem.role === 'teacher' ? '👨‍🏫' : (mem.role === 'leader' ? '👑' : '🎓')} ${mem.num || ''} ${mem.name}
+                    </span>
+                `;
+            }).join('');
+        }
+
+        function renderAllViews() {
+            renderCalendar();
+            renderSelectedDateTasks();
+            renderUpcomingTasks();
+            renderPersonalMakeups();
+            renderClassMembers();
+        }
+
+        window.openAddTaskModal = function() {
+            document.getElementById('taskDate').value = selectedDateStr;
+            document.getElementById('addTaskModal').classList.remove('hidden');
+        };
+
+        window.closeAddTaskModal = function() {
+            document.getElementById('addTaskModal').classList.add('hidden');
+        };
+
+        window.handleAddTaskSubmit = async function(e) {
+            e.preventDefault();
+            const subject = document.getElementById('taskSubject').value.trim();
+            const title = document.getElementById('taskTitle').value.trim();
+            const date = document.getElementById('taskDate').value;
+            const time = document.getElementById('taskTime').value.trim();
+            const desc = document.getElementById('taskDesc').value.trim();
+
+            if (!subject || !title || !date) return;
+
+            const newTask = {
+                subject,
+                title,
+                date,
+                time,
+                desc,
+                author: currentUser.name,
+                createdAt: new Date().toISOString()
+            };
+
+            if (db && currentUser.classCode) {
+                try {
+                    const colRef = collection(db, 'artifacts', appId, 'public', 'data', `tasks_${currentUser.classCode}`);
+                    await addDoc(colRef, newTask);
+                    showToast("수행평가가 성공적으로 등록되었습니다!");
+                } catch(err) {
+                    console.error("Error adding task:", err);
+                    showToast("등록 실패", true);
+                }
+            } else {
+                tasksData.push({ id: Date.now().toString(), ...newTask });
+                renderAllViews();
+                showToast("수행평가가 등록되었습니다.");
+            }
+
+            closeAddTaskModal();
+            document.getElementById('addTaskForm').reset();
+        };
+
+        window.deleteTask = async function(taskId) {
+            if (db && currentUser.classCode) {
+                try {
+                    const taskDocRef = doc(db, 'artifacts', appId, 'public', 'data', `tasks_${currentUser.classCode}`, taskId);
+                    await deleteDoc(taskDocRef);
+                    showToast("삭제되었습니다.");
+                } catch(err) {
+                    console.error("Delete task err", err);
+                }
+            } else {
+                tasksData = tasksData.filter(t => t.id !== taskId);
+                renderAllViews();
+                showToast("삭제되었습니다.");
+            }
+        };
+
+        window.openAssignMakeupModal = function() {
+            document.getElementById('assignMakeupModal').classList.remove('hidden');
+        };
+
+        window.closeAssignMakeupModal = function() {
+            document.getElementById('assignMakeupModal').classList.add('hidden');
+        };
+
+        window.handleAssignMakeupSubmit = async function(e) {
+            e.preventDefault();
+            const targetStudent = document.getElementById('makeupTargetStudent').value.trim();
+            const subject = document.getElementById('makeupSubject').value.trim();
+            const date = document.getElementById('makeupDate').value;
+            const time = document.getElementById('makeupTime').value.trim();
+            const note = document.getElementById('makeupNote').value.trim();
+
+            if (!targetStudent || !subject || !date) return;
+
+            const newMakeup = {
+                targetStudent,
+                subject,
+                date,
+                time,
+                note,
+                teacherName: currentUser.name,
+                createdAt: new Date().toISOString()
+            };
+
+            if (db && currentUser.classCode) {
+                try {
+                    const colRef = collection(db, 'artifacts', appId, 'public', 'data', `makeups_${currentUser.classCode}`);
+                    await addDoc(colRef, newMakeup);
+                    showToast(`${targetStudent} 학생에게 보충 수행 메시지를 발송했습니다!`);
+                } catch(err) {
+                    console.error("Error adding makeup:", err);
+                }
+            } else {
+                makeupsData.push({ id: Date.now().toString(), ...newMakeup });
+                renderPersonalMakeups();
+                showToast("보충 수행 메시지가 지정되었습니다.");
+            }
+
+            closeAssignMakeupModal();
+            document.getElementById('assignMakeupForm').reset();
+        };
+
+        window.toggleMakeupModal = function() {
+            showToast("상단 보충 수행 내역을 확인해 주세요.");
+        };
+
+        // Initial Load setup
+        window.addEventListener('load', () => {
+            renderCalendar();
+            renderSelectedDateTasks();
         });
     </script>
 </body>
