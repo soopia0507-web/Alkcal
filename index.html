@@ -202,6 +202,36 @@
             </div>
         </div>
 
+        <!-- USER FEEDBACK BOARD SECTION -->
+        <div class="glass-card rounded-2xl p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="message-square" class="w-5 h-5 text-emerald-600"></i>
+                    사용자 의견 게시판
+                </h3>
+                <span class="text-xs text-slate-400">실시간 피드백</span>
+            </div>
+
+            <!-- Feedback Input Form -->
+            <form id="feedbackForm" class="space-y-3">
+                <div class="flex gap-2">
+                    <input type="text" id="feedbackAuthor" placeholder="작성자 (닉네임)" required maxlength="15" class="w-1/3 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <input type="text" id="feedbackContent" placeholder="의견이나 피드백을 남겨주세요..." required class="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" id="submitFeedbackBtn" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition flex items-center gap-1.5 shadow-sm">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        등록
+                    </button>
+                </div>
+            </form>
+
+            <!-- Feedback List -->
+            <div id="feedbackList" class="space-y-3 pt-2 divide-y divide-slate-100">
+                <p class="text-xs text-slate-400 text-center py-4">의견을 불러오는 중입니다...</p>
+            </div>
+        </div>
+
         <!-- HISTORY MODAL -->
         <div id="historyModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex justify-end">
             <div class="bg-white w-full max-w-md h-full shadow-2xl p-6 overflow-y-auto flex flex-col justify-between">
@@ -234,6 +264,130 @@
             Powered by Google Gemini API & Vercel Serverless Functions
         </div>
     </footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAzMqH_B4ufSnekfFiDzYGj6FhVhX9QeDQ",
+            authDomain: "board-8dc6f.firebaseapp.com",
+            projectId: "board-8dc6f",
+            storageBucket: "board-8dc6f.firebasestorage.app",
+            messagingSenderId: "1093315248227",
+            appId: "1:1093315248227:web:940c6970035a91c83a3856"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'board-8dc6f';
+        const feedbackColRef = collection(db, 'artifacts', appId, 'public', 'data', 'feedback');
+
+        // Authenticate Anonymously before Firestore operations
+        signInAnonymously(auth).then(() => {
+            initBoardListener();
+        }).catch((err) => {
+            console.error("Firebase Auth error:", err);
+            initBoardListener();
+        });
+
+        // Submit Board Entry
+        const feedbackForm = document.getElementById('feedbackForm');
+        const feedbackAuthor = document.getElementById('feedbackAuthor');
+        const feedbackContent = document.getElementById('feedbackContent');
+        const submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
+
+        if (feedbackForm) {
+            feedbackForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const author = feedbackAuthor.value.trim();
+                const content = feedbackContent.value.trim();
+
+                if (!author || !content) return;
+
+                submitFeedbackBtn.disabled = true;
+                submitFeedbackBtn.classList.add('opacity-50');
+
+                try {
+                    await addDoc(feedbackColRef, {
+                        author: author,
+                        content: content,
+                        createdAt: Date.now()
+                    });
+                    feedbackContent.value = '';
+                } catch (err) {
+                    console.error("Firestore post error:", err);
+                    alert("글 작성 중 오류가 발생했습니다.");
+                } finally {
+                    submitFeedbackBtn.disabled = false;
+                    submitFeedbackBtn.classList.remove('opacity-50');
+                }
+            });
+        }
+
+        // Realtime Listener & Sort (Newest first)
+        function initBoardListener() {
+            onSnapshot(feedbackColRef, (snapshot) => {
+                const feedbackList = document.getElementById('feedbackList');
+                if (!feedbackList) return;
+
+                const docs = [];
+                snapshot.forEach(doc => {
+                    docs.push({ id: doc.id, ...doc.data() });
+                });
+
+                // Sort in memory: newest first
+                docs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+                if (docs.length === 0) {
+                    feedbackList.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">등록된 의견이 없습니다. 첫 번째 의견을 남겨보세요!</p>`;
+                    return;
+                }
+
+                feedbackList.innerHTML = docs.map(item => {
+                    const dateStr = item.createdAt ? new Date(item.createdAt).toLocaleString('ko-KR', {
+                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                    }) : '방금 전';
+
+                    return `
+                        <div class="pt-3 flex flex-col space-y-1">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="font-semibold text-slate-700 flex items-center gap-1">
+                                    <i data-lucide="user" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                    ${escapeHtml(item.author || '익명')}
+                                </span>
+                                <span class="text-slate-400 text-[11px]">${dateStr}</span>
+                            </div>
+                            <p class="text-sm text-slate-800 break-words font-normal pl-4 border-l-2 border-emerald-100 mt-1">${escapeHtml(item.content || '')}</p>
+                        </div>
+                    `;
+                }).join('');
+
+                if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                    window.lucide.createIcons();
+                }
+            }, (error) => {
+                console.error("Firestore snapshot error:", error);
+                const feedbackList = document.getElementById('feedbackList');
+                if (feedbackList) {
+                    feedbackList.innerHTML = `<p class="text-xs text-rose-500 text-center py-4">의견 목록을 불러오는데 실패했습니다.</p>`;
+                }
+            });
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
 
     <script>
         lucide.createIcons();
